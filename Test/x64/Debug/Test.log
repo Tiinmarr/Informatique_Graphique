@@ -1,0 +1,16 @@
+﻿  Test.cpp
+C:\Users\marti\Desktop\3A_ECL\Option\MSO_MOS\Informatique_graphique\test\Test\Test.cpp(68,37): warning C4244: '=' : conversion de 'double' en '_Ty', perte possible de données
+          with
+          [
+              _Ty=unsigned char
+          ]
+C:\Users\marti\Desktop\3A_ECL\Option\MSO_MOS\Informatique_graphique\test\Test\Test.cpp(69,36): warning C4244: '=' : conversion de 'double' en '_Ty', perte possible de données
+          with
+          [
+              _Ty=unsigned char
+          ]
+C:\Users\marti\Desktop\3A_ECL\Option\MSO_MOS\Informatique_graphique\test\Test\Test.cpp(70,37): warning C4244: '=' : conversion de 'double' en '_Ty', perte possible de données
+          with
+          [
+              _Ty=unsigned char
+          ]
