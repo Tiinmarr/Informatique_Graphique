@@ -54,6 +54,9 @@ Vector operator+(const Vector& a, const Vector& b) {
 Vector operator-(const Vector& a, const Vector& b) {
 	return Vector(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
+Vector operator-(const Vector& a) {
+	return Vector(-a[0], -a[1], -a[2]);
+}
 Vector operator*(const Vector& a, double b) {
 	return Vector(a[0] * b, a[1] * b, a[2] * b);
 }
@@ -92,7 +95,7 @@ class Sphere
   Vector centre;
   float rayon;
   Vector albedo;
-  bool mirror;
+  bool mirror, transparent, inverseN;
 
   Sphere() {
     centre = Vector(0.0, 0.0, 0.0);
@@ -101,11 +104,13 @@ class Sphere
 
   }
 
-  Sphere(const Vector& c, float r, const Vector& alb, bool mir = false) {
+  Sphere(const Vector& c, float r, const Vector& alb, bool mir = false, bool trans = false, bool invN = false) {
     centre= c;
     rayon = r;
 	albedo = alb;
 	mirror = mir;
+	transparent = trans;
+	inverseN = invN;
   }
 
   bool intersect(const Ray& r, Vector& P, Vector& N, double& t){
@@ -147,7 +152,8 @@ class Scene
 				best_t = t_local;
 				index = i;
 				P = P_loc;
-				N = N_loc;
+				if (objet[i].inverseN) N = -N_loc;
+				else N = N_loc;
 			}
 		}
 	}
@@ -167,6 +173,38 @@ class Scene
 		if (objet[index].mirror) {
 			Ray reflectd_ray = Ray(P + 0.1*N, r.u - 2 * dot(r.u,N) * N);
 			return GetColor(reflectd_ray, bounce - 1);
+		}
+		else if (objet[index].transparent) {
+			double n1 = 1;
+			double n2 = 1.5;
+			if (dot(r.u,N) > 0) {
+				std::swap(n1,n2);
+				N = -N;
+			}
+			Vector Tt,Tn;
+			Tn = n1/n2 * (r.u - dot(r.u,N) * N);
+			double rad = 1 - sqr(n1/n2) * (1 - sqr(dot(r.u,N)));
+			if (rad < 0) {
+				Vector R = r.u - 2 * dot(r.u,N) * N;
+				return GetColor(Ray(P + 0.1*N, R), bounce - 1);
+			}
+			Tt = -sqrt(rad) * N;
+			Vector T = Tn + Tt;
+			Ray refracted_ray = Ray(P - 0.1*N, T);
+
+
+			// si on veut annuler le coeff de fresnel :
+			// return GetColor(refracted_ray, bounce - 1);
+			
+			// calcul coeff de fresnel : 
+			Vector col1 = GetColor(refracted_ray, bounce - 1);
+			double k0 = sqr((n1 - n2)/ (n1 + n2));
+			double R0 = k0 + (1 - k0) * std::pow(1 - std::abs(dot(r.u,N)),5);
+			double T0 = 1 - R0;
+			Ray reflectd_ray = Ray(P + 0.1*N, r.u - 2 * dot(r.u,N) * N);
+			Vector col2 = GetColor(reflectd_ray, bounce - 1);
+			Vector col = R0 * col2 + T0 * col1 ;
+			return col;
 		}
 		else {
 		Vector PL = lumiere - P;
@@ -196,8 +234,10 @@ int main() {
 	int H = 512;
 
 	Scene scene;
-	Sphere sphere(Vector(0.0,0.0,0.0), 10.0,Vector(0.3,0.9,0.4), true);
-	Sphere sphere2(Vector(20.0,0.0,0.0), 5.0,Vector(0.3,0.4,0.9));
+	Sphere sphere(Vector(0.0,0.0,0.0), 8.0,Vector(0.3,0.9,0.4), true);//mirror
+	Sphere sphere2_1(Vector(20.0,0.0,0.0), 8.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
+	Sphere sphere2_2(Vector(20.0,0.0,0.0), 7.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
+	Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false,true);//transparent
 	Sphere green(Vector(0.0,0.0,-1000.), 940.,Vector(0.,1.,0.));
     Sphere red(Vector(0.0,1000.0,0.), 940.,Vector(1.,0.,0.));
 	Sphere rose(Vector(0.0,0.0,1000.), 940,Vector(1.,0.,0.5));
@@ -211,7 +251,9 @@ int main() {
 	scene.objet.push_back(yellow);
 	scene.objet.push_back(magenta);
 	scene.objet.push_back(sphere);
-	scene.objet.push_back(sphere2);
+	scene.objet.push_back(sphere2_1);
+	scene.objet.push_back(sphere2_2);
+	scene.objet.push_back(sphere3);
  // Scene
 	Vector camera(0.0,0.0,55.0);
 	double fov = 60 * M_PI / 180;
