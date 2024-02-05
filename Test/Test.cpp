@@ -63,12 +63,42 @@ Vector operator*(const Vector& a, double b) {
 Vector operator*(double a, const Vector& b) {
 	return Vector(a * b[0], a * b[1], a * b[2]);
 }
-// Vector operator/(double a, const Vector& b) {
-// 	return Vector(b[0] / a, b[1] / a,  b[2] / a);
-// }
+Vector operator*(const Vector& a, const Vector& b) {
+	return Vector(a[0] * b[0], a[1] * b[1], a[2] * b[2]);
+}
+Vector operator/(const Vector& a, double b) {
+	return Vector(a[0]/b, a[1]/b,  a[2]/b);
+}
 
 double dot(const Vector& a, const Vector& b) {
 	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+Vector cross(const Vector& a, const Vector& b) {
+	return Vector(a[1] * b[2] - a[2] * b[1],
+		a[2] * b[0] - a[0] * b[2],
+		a[0] * b[1] - a[1] * b[0]);
+}
+
+
+Vector random_cos(const Vector &N){
+	double r1 = uniform(engine);
+	double r2 = uniform(engine);
+	double x = cos(2 * M_PI * r1) * sqrt(1 - r2);
+	double y = sin(2 * M_PI * r1) * sqrt(1 - r2);
+	double z = sqrt(r2);
+	Vector T1;
+	if (std::abs(N[0]) < std::abs(N[1])) {
+		if (std::abs(N[0]) < std::abs(N[2])) T1 = Vector(0, -N[2], N[1]);
+		else T1 = Vector(-N[1], N[0], 0);
+	}
+	else {
+		if (std::abs(N[1]) < std::abs(N[2])) T1 = Vector(-N[2], 0, N[0]);
+		else T1 = Vector(-N[1], N[0], 0);
+	}
+	T1.normalize();
+	Vector T2 = cross(N, T1);
+	return Vector(x * T1 + y * T2 + z * N);
 }
 
 class Ray 
@@ -217,14 +247,23 @@ class Scene
 		if (intersect(New_Ray,new_P,new_N,new_index, best_t) && (best_t * best_t) < d2) 
 		{
 			Vector col = Vector(0,0,0);
+			Vector dir_indirect = random_cos(N);
+			Ray r_indirect(P + 0.01 * N, dir_indirect);
+			Vector I_indirect = objet[index].albedo * GetColor(r_indirect, bounce - 1);
+			col += I_indirect;
 			return col;
 		}
 		else {
 			Vector col = objet[index].albedo * intensity * std::max(0.,dot(PL,N)) * (1/(4*M_PI*M_PI*d2));
+			Vector dir_indirect = random_cos(N);
+			Ray r_indirect(P + 0.01 * N, dir_indirect);
+			Vector I_indirect = objet[index].albedo * GetColor(r_indirect, bounce - 1);
+			col += I_indirect;
 			return col;
 		}
 		}
 	}
+	return Vector(0,0,0);
  }
 
 };
@@ -232,6 +271,7 @@ class Scene
 int main() {
 	int W = 512;
 	int H = 512;
+	int N_rays = 70;
 
 	Scene scene;
 	Sphere sphere(Vector(0.0,0.0,0.0), 8.0,Vector(0.3,0.9,0.4), true);//mirror
@@ -272,7 +312,10 @@ int main() {
 			v.normalize();
 			Ray r(camera,v);
 			int bounce = 5;
-			Vector col = scene.GetColor(r, bounce);
+			Vector col;
+			for (int k =0; k<N_rays; k++){
+				col += scene.GetColor(r, bounce)/N_rays;
+			}
 			image[(i * W + j) * 3 + 0] = std::min(255.,std::pow(col[0],0.45));   // RED
 			image[(i * W + j) * 3 + 1] = std::min(255.,std::pow(col[1],0.45)) ;  // GREEN
 			image[(i * W + j) * 3 + 2] =  std::min(255.,std::pow(col[2],0.45));  // BLUE
