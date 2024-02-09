@@ -190,7 +190,7 @@ class Scene
 	return has_inter;
   }
 
-  Vector GetColor(Ray r, int bounce){
+  Vector GetColor(Ray r, int bounce, bool last_bounce_diffuse = false){
 	Vector P,N;
 	double best_t;
 	int index;
@@ -199,7 +199,12 @@ class Scene
 
 	if (bounce == 0) return Vector(0,0,0);
 	if (intersect(r,P,N,index, best_t)) 
+	
 	{ 
+		if (index == 0) {
+			if (last_bounce_diffuse) return Vector(0,0,0);
+			else return Vector(1,1,1)* intensity/(4*M_PI * M_PI *  sqr(objet[0].rayon));
+		}
 		if (objet[index].mirror) {
 			Ray reflectd_ray = Ray(P + 0.1*N, r.u - 2 * dot(r.u,N) * N);
 			return GetColor(reflectd_ray, bounce - 1);
@@ -237,30 +242,56 @@ class Scene
 			return col;
 		}
 		else {
-		Vector PL = lumiere - P;
-		double d2 = PL.norm2();
+		// Vector PL = lumiere - P;
+		// double d2 = PL.norm2();
+		// PL.normalize();
+		// Ray New_Ray = Ray(P+0.1*N, PL);
+		// Vector new_P;
+		// Vector new_N;
+		// int new_index;
+		// if (intersect(New_Ray,new_P,new_N,new_index, best_t) && (best_t * best_t) < d2) 
+		// {
+		// 	Vector col = Vector(0,0,0);
+		// 	Vector dir_indirect = random_cos(N);
+		// 	Ray r_indirect(P + 0.01 * N, dir_indirect);
+		// 	Vector I_indirect = objet[index].albedo * GetColor(r_indirect, bounce - 1);
+		// 	col += I_indirect;
+		// 	return col;
+		// }
+		// else {
+		// 	Vector col = objet[index].albedo * intensity * std::max(0.,dot(PL,N)) * (1/(4*M_PI*M_PI*d2));
+		// 	Vector dir_indirect = random_cos(N);
+		// 	Ray r_indirect(P + 0.01 * N, dir_indirect);
+		// 	Vector I_indirect = objet[index].albedo * GetColor(r_indirect, bounce - 1);
+		// 	col += I_indirect;
+		// 	return col;
+		// }
+		Vector col;
+		Vector PL = objet[0].centre - P;
+		// double d2 = PL.norm2();
 		PL.normalize();
-		Ray New_Ray = Ray(P+0.1*N, PL);
+		Vector NPrim = random_cos(-PL);
+		Vector PPrim = NPrim*objet[0].rayon + objet[0].centre;
+		Vector PLPrim = PPrim - P; //w_i
+		double d2 = PLPrim.norm2();
+		PLPrim.normalize();
+		// double probability_density = dot(NPrim,-PL) / (M_PI * sqr(objet[0].rayon));
+
+		double L_wi = intensity/(4*M_PI * M_PI *  sqr(objet[0].rayon));
+		col = objet[index].albedo * L_wi * std::max(0.,dot(N,PLPrim)) * std::max(0.,dot(NPrim, -PLPrim)) * sqr(objet[0].rayon) /(d2 * std::max(0.,dot(NPrim,-PL)));
+
+		Ray New_Ray = Ray(P+0.001*N, PLPrim);
 		Vector new_P;
 		Vector new_N;
 		int new_index;
-		if (intersect(New_Ray,new_P,new_N,new_index, best_t) && (best_t * best_t) < d2) 
+		if (intersect(New_Ray,new_P,new_N,new_index, best_t) && sqr(best_t + 0.01) < d2) 
 		{
-			Vector col = Vector(0,0,0);
-			Vector dir_indirect = random_cos(N);
-			Ray r_indirect(P + 0.01 * N, dir_indirect);
-			Vector I_indirect = objet[index].albedo * GetColor(r_indirect, bounce - 1);
-			col += I_indirect;
-			return col;
+			col = Vector(0,0,0);
 		}
-		else {
-			Vector col = objet[index].albedo * intensity * std::max(0.,dot(PL,N)) * (1/(4*M_PI*M_PI*d2));
-			Vector dir_indirect = random_cos(N);
-			Ray r_indirect(P + 0.01 * N, dir_indirect);
-			Vector I_indirect = objet[index].albedo * GetColor(r_indirect, bounce - 1);
-			col += I_indirect;
-			return col;
-		}
+		Vector dir_indirect = random_cos(N);
+		Ray r_indirect(P + 0.01 * N, dir_indirect);
+		col += objet[index].albedo * GetColor(r_indirect, bounce - 1,true);
+		return col;
 		}
 	}
 	return Vector(0,0,0);
@@ -271,19 +302,23 @@ class Scene
 int main() {
 	int W = 512;
 	int H = 512;
-	int N_rays = 70;
+	int N_rays = 500;
 
 	Scene scene;
+	Sphere lumiere(Vector(-10,20,40), 10, Vector(1,1,1)); //light
 	Sphere sphere(Vector(0.0,0.0,0.0), 8.0,Vector(0.3,0.9,0.4), true);//mirror
 	Sphere sphere2_1(Vector(20.0,0.0,0.0), 8.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
 	Sphere sphere2_2(Vector(20.0,0.0,0.0), 7.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
-	Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false,true);//transparent
+	// Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false,true);//transparent
+	Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false);
+	// Sphere sphere_pleine(Vector(10,0,10), 4.0,Vector(0.7,0.4,0.2));
 	Sphere green(Vector(0.0,0.0,-1000.), 940.,Vector(0.,1.,0.));
     Sphere red(Vector(0.0,1000.0,0.), 940.,Vector(1.,0.,0.));
 	Sphere rose(Vector(0.0,0.0,1000.), 940,Vector(1.,0.,0.5));
 	Sphere blue(Vector(0.0,-1000.0,0.), 990,Vector(0.,0.,1.));
 	Sphere yellow(Vector(-1000.0,0.0,0.), 940,Vector(1.,1.,0.));
 	Sphere magenta(Vector(1000.0,0.0,0.), 940,Vector(0.8,0.,1.));
+	scene.objet.push_back(lumiere);
 	scene.objet.push_back(green);
 	scene.objet.push_back(red);
 	scene.objet.push_back(rose);
@@ -294,6 +329,7 @@ int main() {
 	scene.objet.push_back(sphere2_1);
 	scene.objet.push_back(sphere2_2);
 	scene.objet.push_back(sphere3);
+	// scene.objet.push_back(sphere_pleine);
  // Scene
 	Vector camera(0.0,0.0,55.0);
 	double fov = 60 * M_PI / 180;
@@ -303,17 +339,17 @@ int main() {
 	Vector color;
 	std::vector<unsigned char> image(W * H * 3, 0);
 
+	int bounce = 7;
 #pragma omp parallel for 
 	for (int i = 0; i < H; i++) {
 		for (int j = 0; j < W; j++) {
-			double r1 = uniform(engine) - 0.5;
-			double r2 = uniform(engine) -0.5;
-			Vector v(j - W/2. + 0.5 +r1, -i + H/2. - 0.5 +r2, - d);
-			v.normalize();
-			Ray r(camera,v);
-			int bounce = 5;
 			Vector col;
 			for (int k =0; k<N_rays; k++){
+				double r1 = uniform(engine) - 0.5;
+				double r2 = uniform(engine) -0.5;
+				Vector v(j - W/2. + 0.5 +r1, -i + H/2. - 0.5 +r2, - d);
+				v.normalize();
+				Ray r(camera,v);
 				col += scene.GetColor(r, bounce)/N_rays;
 			}
 			image[(i * W + j) * 3 + 0] = std::min(255.,std::pow(col[0],0.45));   // RED
