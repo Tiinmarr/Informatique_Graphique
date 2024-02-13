@@ -36,3 +36,7 @@ Here is the same image without the implementation of the fresnel equation :
 Finally,I added the blur effect to the image linked to the aperture and focus. Therefore, we can focus on objects nearby or far away. I'm not very satisfied with this part, and I think it can be improved :
 
 ![flou](/results_rapport/flou.png)
+
+In order to better see the impact of the blur effect, here are to image without/with blur effet : 
+
+![without blur](/results_rapport/pas_flou_net.png) ![with blur](/results_rapport/tres_flou.png)

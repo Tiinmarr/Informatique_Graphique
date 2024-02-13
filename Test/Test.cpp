@@ -306,11 +306,11 @@ int main() {
 
 	Scene scene;
 	Sphere lumiere(Vector(-10,20,40), 10, Vector(1,1,1)); //light
-	Sphere sphere(Vector(0.0,0.0,0.0), 8.0,Vector(0.3,0.9,0.4), true);//mirror
-	Sphere sphere2_1(Vector(20.0,0.0,0.0), 8.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
-	Sphere sphere2_2(Vector(20.0,0.0,0.0), 7.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
+	Sphere sphere(Vector(10.0,0.0,-10.0), 8.0,Vector(0.3,0.9,0.4), true);//mirror
+	Sphere sphere2_1(Vector(-10.0,0.0,25.0), 8.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
+	Sphere sphere2_2(Vector(-10.0,0.0,25.0), 7.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
 	// Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false,true);//transparent
-	Sphere sphere3(Vector(-20.0,0.0,20.0), 8.0,Vector(0.7,0.4,0.2),false);
+	Sphere sphere3(Vector(0.0,0.0,10.0), 8.0,Vector(0.7,0.4,0.2),false);
 	// Sphere sphere_pleine(Vector(10,0,10), 4.0,Vector(0.7,0.4,0.2));
 	Sphere green(Vector(0.0,0.0,-1000.), 940.,Vector(0.,1.,0.));
     Sphere red(Vector(0.0,1000.0,0.), 940.,Vector(1.,0.,0.));
@@ -334,12 +334,13 @@ int main() {
 	Vector camera(0.0,0.0,55.0);
 	double fov = 60 * M_PI / 180;
 	double d = W / (2 * tan(fov/2));
-	double mise_au_point = 455;
-	double ouverture = 0.5;
+	double mise_au_point = 185;
+	double ouverture = 1.5;
 
 	Vector center(0.2, 0.1, 0.);
 	Vector color;
 	std::vector<unsigned char> image(W * H * 3, 0);
+	bool blur = true;
 
 	int bounce = 7;
 #pragma omp parallel for 
@@ -347,24 +348,34 @@ int main() {
 		for (int j = 0; j < W; j++) {
 			Vector col;
 			for (int k =0; k<N_rays; k++){
-				double r1 = uniform(engine);
-				double r2 = uniform(engine);
-				double g1 = sqrt(-2 * log(r1)) * cos(2 * M_PI * r2);
-				double g2 = sqrt(-2 * log(r1)) * sin(2 * M_PI * r2);
+				if (blur) {
+				// double r1 = uniform(engine);
+				// double r2 = uniform(engine);
+				// double g1 = sqrt(-2 * log(r1)) * cos(2 * M_PI * r2);
+				// double g2 = sqrt(-2 * log(r1)) * sin(2 * M_PI * r2);
+				double g1 = uniform(engine)-0.5;
+				double g2 = uniform(engine)-0.5;
 				Vector v(j - W/2. + 0.5 +g1, -i + H/2. - 0.5 +g2, - d);
 				v.normalize();
+				double r3 = uniform(engine);
+				double r4 = uniform(engine);
+				double g3 = sqrt(-2 * log(r3)) * cos(2 * M_PI * r4) * ouverture;
+				double g4 = sqrt(-2 * log(r3)) * sin(2 * M_PI * r4) * ouverture;
 
-				// double r3 = uniform(engine);
-				// double r4 = uniform(engine);
-				// double g3 = sqrt(-2 * log(r3)) * cos(2 * M_PI * r4) * ouverture;
-				// double g4 = sqrt(-2 * log(r3)) * sin(2 * M_PI * r4) * ouverture;
-
-				// Vector Camera_2 = camera + Vector(g3, g4, 0);
-				// Vector dir = camera + mise_au_point * v - Camera_2;
-				// dir.normalize();
-				// Ray r(camera,dir);
+				Vector Camera_2 = camera + Vector(g3, g4, 0);
+				Vector dir = camera + mise_au_point * v - Camera_2;
+				dir.normalize();
+				Ray r(camera,dir);
+				col += scene.GetColor(r, bounce)/N_rays;
+				}
+				else {
+				double r1 = uniform(engine)-0.5;
+				double r2 = uniform(engine)-0.5;
+				Vector v(j - W/2. + 0.5 +r1, -i + H/2. - 0.5 +r2, - d);
+				v.normalize();
 				Ray r(camera,v);
 				col += scene.GetColor(r, bounce)/N_rays;
+				}
 			}
 			image[(i * W + j) * 3 + 0] = std::min(255.,std::pow(col[0],0.45));   // RED
 			image[(i * W + j) * 3 + 1] = std::min(255.,std::pow(col[1],0.45)) ;  // GREEN
