@@ -206,7 +206,7 @@ class Scene
 			else return Vector(1,1,1)* intensity/(4*M_PI * M_PI *  sqr(objet[0].rayon));
 		}
 		if (objet[index].mirror) {
-			Ray reflectd_ray = Ray(P + 0.1*N, r.u - 2 * dot(r.u,N) * N);
+			Ray reflectd_ray = Ray(P + 0.01*N, r.u - 2 * dot(r.u,N) * N);
 			return GetColor(reflectd_ray, bounce - 1);
 		}
 		else if (objet[index].transparent) {
@@ -221,11 +221,11 @@ class Scene
 			double rad = 1 - sqr(n1/n2) * (1 - sqr(dot(r.u,N)));
 			if (rad < 0) {
 				Vector R = r.u - 2 * dot(r.u,N) * N;
-				return GetColor(Ray(P + 0.1*N, R), bounce - 1);
+				return GetColor(Ray(P + 0.01*N, R), bounce - 1);
 			}
 			Tt = -sqrt(rad) * N;
 			Vector T = Tn + Tt;
-			Ray refracted_ray = Ray(P - 0.1*N, T);
+			Ray refracted_ray = Ray(P - 0.01*N, T);
 
 
 			// si on veut annuler le coeff de fresnel :
@@ -236,7 +236,7 @@ class Scene
 			double k0 = sqr((n1 - n2)/ (n1 + n2));
 			double R0 = k0 + (1 - k0) * std::pow(1 - std::abs(dot(r.u,N)),5);
 			double T0 = 1 - R0;
-			Ray reflectd_ray = Ray(P + 0.1*N, r.u - 2 * dot(r.u,N) * N);
+			Ray reflectd_ray = Ray(P + 0.01*N, r.u - 2 * dot(r.u,N) * N);
 			Vector col2 = GetColor(reflectd_ray, bounce - 1);
 			Vector col = R0 * col2 + T0 * col1 ;
 			return col;
@@ -245,7 +245,7 @@ class Scene
 		// Vector PL = lumiere - P;
 		// double d2 = PL.norm2();
 		// PL.normalize();
-		// Ray New_Ray = Ray(P+0.1*N, PL);
+		// Ray New_Ray = Ray(P+0.01*N, PL);
 		// Vector new_P;
 		// Vector new_N;
 		// int new_index;
@@ -302,7 +302,7 @@ class Scene
 int main() {
 	int W = 512;
 	int H = 512;
-	int N_rays = 500;
+	int N_rays = 1500;
 
 	Scene scene;
 	Sphere lumiere(Vector(-10,20,40), 10, Vector(1,1,1)); //light
@@ -310,7 +310,7 @@ int main() {
 	Sphere sphere2_1(Vector(20.0,0.0,0.0), 8.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
 	Sphere sphere2_2(Vector(20.0,0.0,0.0), 7.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
 	// Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false,true);//transparent
-	Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false);
+	Sphere sphere3(Vector(-20.0,0.0,20.0), 8.0,Vector(0.7,0.4,0.2),false);
 	// Sphere sphere_pleine(Vector(10,0,10), 4.0,Vector(0.7,0.4,0.2));
 	Sphere green(Vector(0.0,0.0,-1000.), 940.,Vector(0.,1.,0.));
     Sphere red(Vector(0.0,1000.0,0.), 940.,Vector(1.,0.,0.));
@@ -334,6 +334,8 @@ int main() {
 	Vector camera(0.0,0.0,55.0);
 	double fov = 60 * M_PI / 180;
 	double d = W / (2 * tan(fov/2));
+	double mise_au_point = 455;
+	double ouverture = 0.5;
 
 	Vector center(0.2, 0.1, 0.);
 	Vector color;
@@ -345,10 +347,22 @@ int main() {
 		for (int j = 0; j < W; j++) {
 			Vector col;
 			for (int k =0; k<N_rays; k++){
-				double r1 = uniform(engine) - 0.5;
-				double r2 = uniform(engine) -0.5;
-				Vector v(j - W/2. + 0.5 +r1, -i + H/2. - 0.5 +r2, - d);
+				double r1 = uniform(engine);
+				double r2 = uniform(engine);
+				double g1 = sqrt(-2 * log(r1)) * cos(2 * M_PI * r2);
+				double g2 = sqrt(-2 * log(r1)) * sin(2 * M_PI * r2);
+				Vector v(j - W/2. + 0.5 +g1, -i + H/2. - 0.5 +g2, - d);
 				v.normalize();
+
+				// double r3 = uniform(engine);
+				// double r4 = uniform(engine);
+				// double g3 = sqrt(-2 * log(r3)) * cos(2 * M_PI * r4) * ouverture;
+				// double g4 = sqrt(-2 * log(r3)) * sin(2 * M_PI * r4) * ouverture;
+
+				// Vector Camera_2 = camera + Vector(g3, g4, 0);
+				// Vector dir = camera + mise_au_point * v - Camera_2;
+				// dir.normalize();
+				// Ray r(camera,dir);
 				Ray r(camera,v);
 				col += scene.GetColor(r, bounce)/N_rays;
 			}
