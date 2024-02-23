@@ -37,6 +37,14 @@ Finally,I added the blur effect to the image linked to the aperture and focus. T
 
 ![flou](/results_rapport/flou.png)
 
-In order to better see the impact of the blur effect, here are to image without/with blur effet : 
+In order to better see the impact of the blur effect, here are to image without/with blur effect : 
 
 ![without blur](/results_rapport/pas_flou_net.png) ![with blur](/results_rapport/tres_flou.png)
+
+Then, I added the mesh loading. It allows to add a mesh composed of vertices and triangles. (We also add a boundinbox around the mesh in order to reduce the tcomputation time.)
+
+I also added the possibility to translate/rotate/scale the mesh, by juste modifying the postions of the vertices and the triangles.
+
+Here is the result with two meshes of cat, I decided to try 2500 rays for 7 bounces, therefore it take a lot time (more than 2 hours I guess..). Nevertheless, the picture is very nice : 
+
+![cat](/results_rapport/cat.png)

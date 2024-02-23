@@ -608,9 +608,9 @@ class Scene
 };
 
 int main() {
-	int W = 256;
-	int H = 256;
-	int N_rays = 20;
+	int W = 512;
+	int H = 512;
+	int N_rays = 2500;
 
 	TriangleMesh mesh(Vector(1,0.3,0));
 	mesh.readOBJ("cat.obj");
