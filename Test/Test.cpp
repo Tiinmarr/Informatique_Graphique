@@ -414,10 +414,13 @@ TriangleMesh(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, 
 
 					if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <= 1 && alpha >= 0 && t_local > 0) {
 						has_inter = true;
-						if (t_local < t) {
+						if (t_local < new_t) {
+							new_t = t_local;
 							t = t_local;
 							P = r.O + t * r.u;
-							N = localN;
+							// N = localN;
+							// N.normalize();
+							N = alpha * normals[indices[i].ni] + beta * normals[indices[i].nj] + gamma * normals[indices[i].nk];
 							N.normalize();
 						}
 					}
@@ -714,7 +717,7 @@ class Scene
 int main() {
 	int W = 512;
 	int H = 512;
-	int N_rays = 100;
+	int N_rays = 500;
 
 	TriangleMesh mesh(Vector(1,0.3,0));
 	mesh.readOBJ("cat.obj");
@@ -724,25 +727,28 @@ int main() {
 	mesh.root = new Node(mesh.printBox(0, mesh.indices.size()));
 	mesh.print_Tree(mesh.root, 0, mesh.indices.size());
 
-	// TriangleMesh mesh2(Vector(0.,0.,0.));
-	// mesh2.readOBJ("cat.obj");
-	// mesh2.scale(0.5);
-	// mesh2.translate(Vector(-25,-10,-8));
-	// mesh2.rotate(-3*M_PI/4, Vector(0,1,0));
-	// mesh2.printBox();
+	TriangleMesh mesh2(Vector(0.,0.,0.));
+	mesh2.readOBJ("cat.obj");
+	mesh2.scale(0.5);
+	mesh2.translate(Vector(-25,-10,-8));
+	mesh2.rotate(-3*M_PI/4, Vector(0,1,0));
+	mesh2.root = new Node(mesh2.printBox(0, mesh2.indices.size()));
+	mesh2.print_Tree(mesh2.root, 0, mesh2.indices.size());
 
-	// mesh.readOBJ("car.obj");
-	// mesh.scale(1.3);
-	// mesh.rotate(M_PI/2, Vector(0,1,0));
-	// mesh.translate(Vector(0,-5,0));
-	// mesh.printBox();
+	TriangleMesh mesh3(Vector(0.8,0.3,0.2));
+	mesh3.readOBJ("car.obj");
+	mesh3.scale(1.1);
+	mesh3.rotate(M_PI/2, Vector(0,1,0));
+	mesh3.translate(Vector(-5,-10,0.));
+	mesh3.root = new Node(mesh3.printBox(0, mesh3.indices.size()));
+	mesh3.print_Tree(mesh3.root, 0, mesh3.indices.size());
 	
 
 	Scene scene;
 	Sphere lumiere(Vector(-10,20,35), 10, Vector(1,1,1)); //light
 	Sphere sphere(Vector(0.0,20.0,-10.0), 8.0,Vector(0.3,0.9,0.4), true);//mirror
-	Sphere sphere2_1(Vector(-10.0,0.0,25.0), 8.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
-	Sphere sphere2_2(Vector(-10.0,0.0,25.0), 7.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
+	Sphere sphere2_1(Vector(-20.0,20.0,-10.0), 8.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
+	Sphere sphere2_2(Vector(-20.0,20.0,-10.0), 7.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
 	// Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false,true);//transparent
 	Sphere sphere3(Vector(0.0,0.0,10.0), 8.0,Vector(0.7,0.4,0.2),false);
 	// Sphere sphere_pleine(Vector(10,0,10), 4.0,Vector(0.7,0.4,0.2));
@@ -760,12 +766,13 @@ int main() {
 	scene.objet.push_back(&yellow);
 	scene.objet.push_back(&magenta);
 	scene.objet.push_back(&sphere);
-	// scene.objet.push_back(&sphere2_1);
-	// scene.objet.push_back(&sphere2_2);
+	scene.objet.push_back(&sphere2_1);
+	scene.objet.push_back(&sphere2_2);
 	// scene.objet.push_back(&sphere3);
 	// scene.objet.push_back(&sphere_pleine);
 	scene.objet.push_back(&mesh);
-	// scene.objet.push_back(&mesh2);
+	scene.objet.push_back(&mesh2);
+	scene.objet.push_back(&mesh3);
  // Scene
 	Vector camera(0.0,0.0,55.0);
 	double fov = 60 * M_PI / 180;
