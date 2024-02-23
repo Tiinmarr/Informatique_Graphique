@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <algorithm>
 #include <random>
+#include <list>
+
 static std::default_random_engine engine(10);
 static std::uniform_real_distribution<double>uniform(0, 1);
 
@@ -135,6 +137,7 @@ public:
 	bool inverseN;
 };
 
+
 class BoundingBox {
 public:
 	BoundingBox() {}
@@ -167,6 +170,15 @@ public:
 	Vector pmin, pmax;
 };
 
+class Node {
+public:
+	Node(const BoundingBox& bbox,int index_init = -1,int index_end=-1, Node* fg = NULL, Node* fd = NULL) : bbox(bbox), fg(fg), fd(fd), index_init(index_init), index_end(index_end)  {}
+	BoundingBox bbox;
+	Node* fg;
+	Node* fd;
+	int index_init;
+	int index_end;
+};
 
 class TriangleIndices {
 public:
@@ -185,8 +197,8 @@ TriangleMesh(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, 
         : Geometry(albedo, mirror, transparent, inverseN) {}
   ~TriangleMesh() {}
 	// TriangleMesh() {};
-	BoundingBox bbox;
-
+	// BoundingBox bbox;
+	Node* root;
 	void readOBJ(const char* obj) {
 
 		char matfile[255];
@@ -362,54 +374,146 @@ TriangleMesh(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, 
 	}
 
 	bool intersect(const Ray& r, Vector& P, Vector& N, double& t) const {
-		if (!bbox.has_intersection(r)) return false;
 		double new_t =1E10;
-		bool has_inter = false;
-		for (int i=0; i<indices.size(); i++)
+		bool has_inter =false;
+		if (!root->bbox.has_intersection(r)) return false;
+		std::list<Node*> nodes;
+		nodes.push_back(root);
+
+		while (!nodes.empty())
 		{
-			const Vector& A = vertices[indices[i].vtxi];
-			const Vector& B = vertices[indices[i].vtxj];
-			const Vector& C = vertices[indices[i].vtxk];
+			const Node* actual = nodes.back();
+			nodes.pop_back();
 
-			Vector e1 = B - A;
-			Vector e2 = C - A;
-			Vector localN = cross(e1, e2);
+			if (actual->fg) {
+				if (actual->fg->bbox.has_intersection(r)) {
+					nodes.push_back(actual->fg);
+				}
+				if (actual->fd->bbox.has_intersection(r)) {
+					nodes.push_back(actual->fd);
+				}
+			}
+			else {
+				for (int i = actual->index_init; i < actual->index_end; i++) {
+					const Vector& A = vertices[indices[i].vtxi];
+					const Vector& B = vertices[indices[i].vtxj];
+					const Vector& C = vertices[indices[i].vtxk];
 
-			Vector OA_u = cross(A - r.O, r.u);
+					Vector e1 = B - A;
+					Vector e2 = C - A;
+					Vector localN = cross(e1, e2);
 
-			double uN = dot(r.u, localN);
+					Vector OA_u = cross(A - r.O, r.u);
 
-			double beta = dot(e2, OA_u) / uN;
-			double gamma = -dot(e1, OA_u) / uN;
-			double t_local = dot(A - r.O, localN) / uN;  
-			double alpha = 1 - beta - gamma;
+					double uN = dot(r.u, localN);
 
-			if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <=1 && alpha >= 0 && t_local >0) {
-				has_inter = true;
-				if (t_local < new_t) {
-					new_t = t_local;
-					t = t_local;
-					P = r.O + t * r.u;
-					N = localN;
-					N.normalize();
+					double beta = dot(e2, OA_u) / uN;
+					double gamma = -dot(e1, OA_u) / uN;
+					double t_local = dot(A - r.O, localN) / uN;
+					double alpha = 1 - beta - gamma;
+
+					if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <= 1 && alpha >= 0 && t_local > 0) {
+						has_inter = true;
+						if (t_local < t) {
+							t = t_local;
+							P = r.O + t * r.u;
+							N = localN;
+							N.normalize();
+						}
+					}
 				}
 			}
 		}
 		return has_inter;
+		// double new_t =1E10;
+		// // bool has_inter = false;
+		// bool has_inter;
+		// for (int i=0; i<indices.size(); i++)
+		// {
+		// 	const Vector& A = vertices[indices[i].vtxi];
+		// 	const Vector& B = vertices[indices[i].vtxj];
+		// 	const Vector& C = vertices[indices[i].vtxk];
+
+		// 	Vector e1 = B - A;
+		// 	Vector e2 = C - A;
+		// 	Vector localN = cross(e1, e2);
+
+		// 	Vector OA_u = cross(A - r.O, r.u);
+
+		// 	double uN = dot(r.u, localN);
+
+		// 	double beta = dot(e2, OA_u) / uN;
+		// 	double gamma = -dot(e1, OA_u) / uN;
+		// 	double t_local = dot(A - r.O, localN) / uN;  
+		// 	double alpha = 1 - beta - gamma;
+
+		// 	if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <=1 && alpha >= 0 && t_local >0) {
+		// 		has_inter = true;
+		// 		if (t_local < new_t) {
+		// 			new_t = t_local;
+		// 			t = t_local;
+		// 			P = r.O + t * r.u;
+		// 			N = localN;
+		// 			N.normalize();
+		// 		}
+		// 	}
+		// }
+		// return has_inter;
 	}
 
-	void printBox() {
+	BoundingBox printBox(int triangle_init, int triangle_end) {
+		BoundingBox bbox;
 		bbox.pmin = Vector(1E10, 1E10, 1E10);
 		bbox.pmax = Vector(-1E10, -1E10, -1E10);
 
-		for (int i=0;i<vertices.size();i++) {
-			bbox.pmin[0] = std::min(bbox.pmin[0], vertices[i][0]);
-			bbox.pmin[1] = std::min(bbox.pmin[1], vertices[i][1]);
-			bbox.pmin[2] = std::min(bbox.pmin[2], vertices[i][2]);
-			bbox.pmax[0] = std::max(bbox.pmax[0], vertices[i][0]);
-			bbox.pmax[1] = std::max(bbox.pmax[1], vertices[i][1]);
-			bbox.pmax[2] = std::max(bbox.pmax[2], vertices[i][2]);
+		for (int i=triangle_init;i<triangle_end;i++) {
+			for (int j=0;j<3;j++) {
+			bbox.pmin[j] = std::min(bbox.pmin[j], vertices[indices[i].vtxi][j]);
+			bbox.pmin[j] = std::min(bbox.pmin[j], vertices[indices[i].vtxj][j]);
+			bbox.pmin[j] = std::min(bbox.pmin[j], vertices[indices[i].vtxk][j]);
+
+
+			bbox.pmax[j] = std::max(bbox.pmax[j], vertices[indices[i].vtxi][j]);
+			bbox.pmax[j] = std::max(bbox.pmax[j], vertices[indices[i].vtxj][j]);
+			bbox.pmax[j] = std::max(bbox.pmax[j], vertices[indices[i].vtxk][j]);
+			}
 		}
+
+		return bbox;
+	}
+
+	void print_Tree(Node* node,int init, int end)
+	{
+		node->index_init = init;
+		node->index_end = end;
+		BoundingBox b = printBox(init, end);
+		node->bbox = b;
+		node->fg = NULL;
+		node->fd = NULL;
+
+		Vector size = b.pmax - b.pmin;
+		Vector mid = (b.pmin + b.pmax) / 2;
+		int dimension;
+		if (size[0] > size[1] && size[0] > size[2]) dimension = 0;
+		else if (size[1] > size[2]) dimension = 1;
+		else dimension = 2;
+
+		// Qsort
+		int pivot = init;
+		for (int i = init; i < end; i++) {
+			double mid_triangle = (vertices[indices[i].vtxi][dimension] + vertices[indices[i].vtxj][dimension] + vertices[indices[i].vtxk][dimension]) / 3;
+			if (mid_triangle < mid[dimension]) {
+				std::swap(indices[i], indices[pivot]);
+				pivot++;
+			}
+		}
+
+		if(end - init < 5 || pivot - init < 2 || end - pivot <2) return;
+
+		node->fg = new Node(b);
+		node->fd = new Node(b);
+		print_Tree(node->fg, init, pivot);
+		print_Tree(node->fd, pivot, end);
 	}
 
 	std::vector<TriangleIndices> indices;
@@ -610,21 +714,22 @@ class Scene
 int main() {
 	int W = 512;
 	int H = 512;
-	int N_rays = 2500;
+	int N_rays = 100;
 
 	TriangleMesh mesh(Vector(1,0.3,0));
 	mesh.readOBJ("cat.obj");
 	mesh.scale(0.5);
 	mesh.translate(Vector(-25,-10,8));
 	mesh.rotate(-M_PI/4, Vector(0,1,0));
-	mesh.printBox();
+	mesh.root = new Node(mesh.printBox(0, mesh.indices.size()));
+	mesh.print_Tree(mesh.root, 0, mesh.indices.size());
 
-	TriangleMesh mesh2(Vector(0.,0.,0.));
-	mesh2.readOBJ("cat.obj");
-	mesh2.scale(0.5);
-	mesh2.translate(Vector(-25,-10,-8));
-	mesh2.rotate(-3*M_PI/4, Vector(0,1,0));
-	mesh2.printBox();
+	// TriangleMesh mesh2(Vector(0.,0.,0.));
+	// mesh2.readOBJ("cat.obj");
+	// mesh2.scale(0.5);
+	// mesh2.translate(Vector(-25,-10,-8));
+	// mesh2.rotate(-3*M_PI/4, Vector(0,1,0));
+	// mesh2.printBox();
 
 	// mesh.readOBJ("car.obj");
 	// mesh.scale(1.3);
@@ -660,7 +765,7 @@ int main() {
 	// scene.objet.push_back(&sphere3);
 	// scene.objet.push_back(&sphere_pleine);
 	scene.objet.push_back(&mesh);
-	scene.objet.push_back(&mesh2);
+	// scene.objet.push_back(&mesh2);
  // Scene
 	Vector camera(0.0,0.0,55.0);
 	double fov = 60 * M_PI / 180;
