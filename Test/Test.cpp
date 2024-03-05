@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <algorithm>
 #include <random>
+#include <list>
+
 static std::default_random_engine engine(10);
 static std::uniform_real_distribution<double>uniform(0, 1);
 
@@ -135,6 +137,7 @@ public:
 	bool inverseN;
 };
 
+
 class BoundingBox {
 public:
 	BoundingBox() {}
@@ -167,6 +170,15 @@ public:
 	Vector pmin, pmax;
 };
 
+class Node {
+public:
+	Node(const BoundingBox& bbox,int index_init = -1,int index_end=-1, Node* fg = NULL, Node* fd = NULL) : bbox(bbox), fg(fg), fd(fd), index_init(index_init), index_end(index_end)  {}
+	BoundingBox bbox;
+	Node* fg;
+	Node* fd;
+	int index_init;
+	int index_end;
+};
 
 class TriangleIndices {
 public:
@@ -185,8 +197,8 @@ TriangleMesh(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, 
         : Geometry(albedo, mirror, transparent, inverseN) {}
   ~TriangleMesh() {}
 	// TriangleMesh() {};
-	BoundingBox bbox;
-
+	// BoundingBox bbox;
+	Node* root;
 	void readOBJ(const char* obj) {
 
 		char matfile[255];
@@ -362,54 +374,149 @@ TriangleMesh(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, 
 	}
 
 	bool intersect(const Ray& r, Vector& P, Vector& N, double& t) const {
-		if (!bbox.has_intersection(r)) return false;
 		double new_t =1E10;
-		bool has_inter = false;
-		for (int i=0; i<indices.size(); i++)
+		bool has_inter =false;
+		if (!root->bbox.has_intersection(r)) return false;
+		std::list<Node*> nodes;
+		nodes.push_back(root);
+
+		while (!nodes.empty())
 		{
-			const Vector& A = vertices[indices[i].vtxi];
-			const Vector& B = vertices[indices[i].vtxj];
-			const Vector& C = vertices[indices[i].vtxk];
+			const Node* actual = nodes.back();
+			nodes.pop_back();
 
-			Vector e1 = B - A;
-			Vector e2 = C - A;
-			Vector localN = cross(e1, e2);
+			if (actual->fg) {
+				if (actual->fg->bbox.has_intersection(r)) {
+					nodes.push_back(actual->fg);
+				}
+				if (actual->fd->bbox.has_intersection(r)) {
+					nodes.push_back(actual->fd);
+				}
+			}
+			else {
+				for (int i = actual->index_init; i < actual->index_end; i++) {
+					const Vector& A = vertices[indices[i].vtxi];
+					const Vector& B = vertices[indices[i].vtxj];
+					const Vector& C = vertices[indices[i].vtxk];
 
-			Vector OA_u = cross(A - r.O, r.u);
+					Vector e1 = B - A;
+					Vector e2 = C - A;
+					Vector localN = cross(e1, e2);
 
-			double uN = dot(r.u, localN);
+					Vector OA_u = cross(A - r.O, r.u);
 
-			double beta = dot(e2, OA_u) / uN;
-			double gamma = -dot(e1, OA_u) / uN;
-			double t_local = dot(A - r.O, localN) / uN;  
-			double alpha = 1 - beta - gamma;
+					double uN = dot(r.u, localN);
 
-			if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <=1 && alpha >= 0 && t_local >0) {
-				has_inter = true;
-				if (t_local < new_t) {
-					new_t = t_local;
-					t = t_local;
-					P = r.O + t * r.u;
-					N = localN;
-					N.normalize();
+					double beta = dot(e2, OA_u) / uN;
+					double gamma = -dot(e1, OA_u) / uN;
+					double t_local = dot(A - r.O, localN) / uN;
+					double alpha = 1 - beta - gamma;
+
+					if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <= 1 && alpha >= 0 && t_local > 0) {
+						has_inter = true;
+						if (t_local < new_t) {
+							new_t = t_local;
+							t = t_local;
+							P = r.O + t * r.u;
+							// N = localN;
+							// N.normalize();
+							N = alpha * normals[indices[i].ni] + beta * normals[indices[i].nj] + gamma * normals[indices[i].nk];
+							N.normalize();
+						}
+					}
 				}
 			}
 		}
 		return has_inter;
+		// double new_t =1E10;
+		// // bool has_inter = false;
+		// bool has_inter;
+		// for (int i=0; i<indices.size(); i++)
+		// {
+		// 	const Vector& A = vertices[indices[i].vtxi];
+		// 	const Vector& B = vertices[indices[i].vtxj];
+		// 	const Vector& C = vertices[indices[i].vtxk];
+
+		// 	Vector e1 = B - A;
+		// 	Vector e2 = C - A;
+		// 	Vector localN = cross(e1, e2);
+
+		// 	Vector OA_u = cross(A - r.O, r.u);
+
+		// 	double uN = dot(r.u, localN);
+
+		// 	double beta = dot(e2, OA_u) / uN;
+		// 	double gamma = -dot(e1, OA_u) / uN;
+		// 	double t_local = dot(A - r.O, localN) / uN;  
+		// 	double alpha = 1 - beta - gamma;
+
+		// 	if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <=1 && alpha >= 0 && t_local >0) {
+		// 		has_inter = true;
+		// 		if (t_local < new_t) {
+		// 			new_t = t_local;
+		// 			t = t_local;
+		// 			P = r.O + t * r.u;
+		// 			N = localN;
+		// 			N.normalize();
+		// 		}
+		// 	}
+		// }
+		// return has_inter;
 	}
 
-	void printBox() {
+	BoundingBox printBox(int triangle_init, int triangle_end) {
+		BoundingBox bbox;
 		bbox.pmin = Vector(1E10, 1E10, 1E10);
 		bbox.pmax = Vector(-1E10, -1E10, -1E10);
 
-		for (int i=0;i<vertices.size();i++) {
-			bbox.pmin[0] = std::min(bbox.pmin[0], vertices[i][0]);
-			bbox.pmin[1] = std::min(bbox.pmin[1], vertices[i][1]);
-			bbox.pmin[2] = std::min(bbox.pmin[2], vertices[i][2]);
-			bbox.pmax[0] = std::max(bbox.pmax[0], vertices[i][0]);
-			bbox.pmax[1] = std::max(bbox.pmax[1], vertices[i][1]);
-			bbox.pmax[2] = std::max(bbox.pmax[2], vertices[i][2]);
+		for (int i=triangle_init;i<triangle_end;i++) {
+			for (int j=0;j<3;j++) {
+			bbox.pmin[j] = std::min(bbox.pmin[j], vertices[indices[i].vtxi][j]);
+			bbox.pmin[j] = std::min(bbox.pmin[j], vertices[indices[i].vtxj][j]);
+			bbox.pmin[j] = std::min(bbox.pmin[j], vertices[indices[i].vtxk][j]);
+
+
+			bbox.pmax[j] = std::max(bbox.pmax[j], vertices[indices[i].vtxi][j]);
+			bbox.pmax[j] = std::max(bbox.pmax[j], vertices[indices[i].vtxj][j]);
+			bbox.pmax[j] = std::max(bbox.pmax[j], vertices[indices[i].vtxk][j]);
+			}
 		}
+
+		return bbox;
+	}
+
+	void print_Tree(Node* node,int init, int end)
+	{
+		node->index_init = init;
+		node->index_end = end;
+		BoundingBox b = printBox(init, end);
+		node->bbox = b;
+		node->fg = NULL;
+		node->fd = NULL;
+
+		Vector size = b.pmax - b.pmin;
+		Vector mid = (b.pmin + b.pmax) / 2;
+		int dimension;
+		if (size[0] > size[1] && size[0] > size[2]) dimension = 0;
+		else if (size[1] > size[2]) dimension = 1;
+		else dimension = 2;
+
+		// Qsort
+		int pivot = init;
+		for (int i = init; i < end; i++) {
+			double mid_triangle = (vertices[indices[i].vtxi][dimension] + vertices[indices[i].vtxj][dimension] + vertices[indices[i].vtxk][dimension]) / 3;
+			if (mid_triangle < mid[dimension]) {
+				std::swap(indices[i], indices[pivot]);
+				pivot++;
+			}
+		}
+
+		if(end - init < 5 || pivot - init < 2 || end - pivot <2) return;
+
+		node->fg = new Node(b);
+		node->fd = new Node(b);
+		print_Tree(node->fg, init, pivot);
+		print_Tree(node->fd, pivot, end);
 	}
 
 	std::vector<TriangleIndices> indices;
@@ -610,43 +717,114 @@ class Scene
 int main() {
 	int W = 512;
 	int H = 512;
-	int N_rays = 2500;
+	int N_rays = 200;
 
-	TriangleMesh mesh(Vector(1,0.3,0));
-	mesh.readOBJ("cat.obj");
-	mesh.scale(0.5);
-	mesh.translate(Vector(-25,-10,8));
-	mesh.rotate(-M_PI/4, Vector(0,1,0));
-	mesh.printBox();
+// For debbuging : 
+	// TriangleMesh mesh(Vector(1,0.3,0));
+	// mesh.readOBJ("cat.obj");
+	// mesh.scale(0.5);
+	// mesh.translate(Vector(-25,-10,8));
+	// mesh.rotate(-M_PI/4, Vector(0,1,0));
+	// mesh.root = new Node(mesh.printBox(0, mesh.indices.size()));
+	// mesh.print_Tree(mesh.root, 0, mesh.indices.size());
 
-	TriangleMesh mesh2(Vector(0.,0.,0.));
-	mesh2.readOBJ("cat.obj");
-	mesh2.scale(0.5);
-	mesh2.translate(Vector(-25,-10,-8));
-	mesh2.rotate(-3*M_PI/4, Vector(0,1,0));
-	mesh2.printBox();
+	// TriangleMesh mesh2(Vector(0.,0.,0.));
+	// mesh2.readOBJ("cat.obj");
+	// mesh2.scale(0.5);
+	// mesh2.translate(Vector(-25,-10,-8));
+	// mesh2.rotate(-3*M_PI/4, Vector(0,1,0));
+	// mesh2.root = new Node(mesh2.printBox(0, mesh2.indices.size()));
+	// mesh2.print_Tree(mesh2.root, 0, mesh2.indices.size());
 
-	// mesh.readOBJ("car.obj");
-	// mesh.scale(1.3);
-	// mesh.rotate(M_PI/2, Vector(0,1,0));
-	// mesh.translate(Vector(0,-5,0));
-	// mesh.printBox();
+	// TriangleMesh mesh3(Vector(0.8,0.3,0.2));
+	// mesh3.readOBJ("mouse.obj");
+	// mesh3.scale(2.5);
+	// mesh3.rotate(M_PI, Vector(0,1,0));
+	// mesh3.translate(Vector(-5,-8,0.));
+	// mesh3.root = new Node(mesh3.printBox(0, mesh3.indices.size()));
+	// mesh3.print_Tree(mesh3.root, 0, mesh3.indices.size());
 	
+// Final scene : 
+
+	TriangleMesh mesh(Vector(0.6, 0.3, 0.1));
+	mesh.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
+	mesh.scale(0.5);
+	mesh.translate(Vector(0,-10,5));
+	mesh.root = new Node(mesh.printBox(0, mesh.indices.size()));
+	mesh.print_Tree(mesh.root, 0, mesh.indices.size());
+
+	TriangleMesh mesh2(Vector(0.6, 0.3, 0.1));
+	mesh2.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
+	mesh2.scale(0.5);
+	mesh2.translate(Vector(-20,-10,5));
+	mesh2.root = new Node(mesh2.printBox(0, mesh2.indices.size()));
+	mesh2.print_Tree(mesh2.root, 0, mesh2.indices.size());
+
+	TriangleMesh mesh3(Vector(0.6, 0.3, 0.1));
+	mesh3.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
+	mesh3.scale(0.5);
+	mesh3.translate(Vector(20,-10,5));
+	mesh3.root = new Node(mesh3.printBox(0, mesh3.indices.size()));
+	mesh3.print_Tree(mesh3.root, 0, mesh3.indices.size());
+
+	TriangleMesh mesh4(Vector(0.9, 0.9, 0.9));
+	mesh4.readOBJ("./support_rodin/Doric Pedestal.obj");
+	mesh4.scale(30);
+	mesh4.translate(Vector(12.5,-10,-10));
+	mesh4.root = new Node(mesh4.printBox(0, mesh4.indices.size()));
+	mesh4.print_Tree(mesh4.root, 0, mesh4.indices.size());
+
+	TriangleMesh mesh5(Vector(0.9, 0.9, 0.9));
+	mesh5.readOBJ("./support_rodin/Doric Pedestal.obj");
+	mesh5.scale(30);
+	mesh5.translate(Vector(-12.5,-10,-10));
+	mesh5.root = new Node(mesh5.printBox(0, mesh5.indices.size()));
+	mesh5.print_Tree(mesh5.root, 0, mesh5.indices.size());
+
+	TriangleMesh mesh6(Vector(0.9, 0.9, 0.9));
+	mesh6.readOBJ("Rodin_Thinker.obj");
+	mesh6.scale(7);
+	mesh6.translate(Vector(20,-0.7,5));
+	mesh6.root = new Node(mesh6.printBox(0, mesh6.indices.size()));
+	mesh6.print_Tree(mesh6.root, 0, mesh6.indices.size());
+
+	TriangleMesh mesh7(Vector(0.216, 0.427, 0.392));
+	mesh7.readOBJ("model.obj");
+	mesh7.scale(4);
+	mesh7.translate(Vector(-23,-1,2));
+	mesh7.root = new Node(mesh7.printBox(0, mesh7.indices.size()));
+	mesh7.print_Tree(mesh7.root, 0, mesh7.indices.size());
+
+	TriangleMesh mesh8(Vector(0.83, 0.71, 0.55));
+	mesh8.readOBJ("snake.obj");
+	mesh8.scale(1);
+	mesh8.translate(Vector(-0,-2,0));
+	mesh8.root = new Node(mesh8.printBox(0, mesh8.indices.size()));
+	mesh8.print_Tree(mesh8.root, 0, mesh8.indices.size());
 
 	Scene scene;
-	Sphere lumiere(Vector(-10,20,35), 10, Vector(1,1,1)); //light
-	Sphere sphere(Vector(0.0,20.0,-10.0), 8.0,Vector(0.3,0.9,0.4), true);//mirror
-	Sphere sphere2_1(Vector(-10.0,0.0,25.0), 8.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
-	Sphere sphere2_2(Vector(-10.0,0.0,25.0), 7.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
+	Sphere lumiere(Vector(-10,30,35), 10, Vector(1,1,1)); //light
+	Sphere sphere(Vector(12.5,17.0,-10.0), 6.0,Vector(0.3,0.9,0.4), true);//mirror
+	Sphere sphere2_1(Vector(-12.5,17.0,-10.0), 6.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
+	Sphere sphere2_2(Vector(-12.5,17.0,-10.0), 5.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
 	// Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false,true);//transparent
 	Sphere sphere3(Vector(0.0,0.0,10.0), 8.0,Vector(0.7,0.4,0.2),false);
 	// Sphere sphere_pleine(Vector(10,0,10), 4.0,Vector(0.7,0.4,0.2));
-	Sphere green(Vector(0.0,0.0,-1000.), 940.,Vector(0.,1.,0.));
-    Sphere red(Vector(0.0,1000.0,0.), 940.,Vector(1.,0.,0.));
-	Sphere rose(Vector(0.0,0.0,1000.), 940,Vector(1.,0.,0.5));
-	Sphere blue(Vector(0.0,-1000.0,0.), 990,Vector(0.,0.,1.));
-	Sphere yellow(Vector(-1000.0,0.0,0.), 940,Vector(1.,1.,0.));
-	Sphere magenta(Vector(1000.0,0.0,0.), 940,Vector(0.8,0.,1.));
+	Sphere green(Vector(0.0, 0.0, -1000.), 940., Vector(0.1, 0.8, 1));
+	Sphere red(Vector(0.0, 1000.0, 0.), 940., Vector(1, 0.2, 0.2));
+	Sphere rose(Vector(0.0, 0.0, 1000.), 940, Vector(0.8, 0.2, 0.6));
+	Sphere blue(Vector(0.0, -1000.0, 0.), 990, Vector(0.2, 0.2, 1));
+	Sphere yellow(Vector(-1000.0, 0.0, 0.), 940, Vector(1, 1, 0));
+	Sphere magenta(Vector(1000.0, 0.0, 0.), 940, Vector(1, 0, 1));
+
+
+	// orignal colors : 
+	// Sphere green(Vector(0.0,0.0,-1000.), 940.,Vector(0.,1.,0.));
+    // Sphere red(Vector(0.0,1000.0,0.), 940.,Vector(1.,0.,0.));
+	// Sphere rose(Vector(0.0,0.0,1000.), 940,Vector(1.,0.,0.5));
+	// Sphere blue(Vector(0.0,-1000.0,0.), 990,Vector(0.,0.,1.));
+	// Sphere yellow(Vector(-1000.0,0.0,0.), 940,Vector(1.,1.,0.));
+	// Sphere magenta(Vector(1000.0,0.0,0.), 940,Vector(0.8,0.,1.));
 	scene.objet.push_back(&lumiere);
 	scene.objet.push_back(&green);
 	scene.objet.push_back(&red);
@@ -655,12 +833,18 @@ int main() {
 	scene.objet.push_back(&yellow);
 	scene.objet.push_back(&magenta);
 	scene.objet.push_back(&sphere);
-	// scene.objet.push_back(&sphere2_1);
-	// scene.objet.push_back(&sphere2_2);
+	scene.objet.push_back(&sphere2_1);
+	scene.objet.push_back(&sphere2_2);
 	// scene.objet.push_back(&sphere3);
 	// scene.objet.push_back(&sphere_pleine);
 	scene.objet.push_back(&mesh);
 	scene.objet.push_back(&mesh2);
+	scene.objet.push_back(&mesh3);
+	scene.objet.push_back(&mesh4);
+	scene.objet.push_back(&mesh5);
+	scene.objet.push_back(&mesh6);
+	scene.objet.push_back(&mesh7);
+	scene.objet.push_back(&mesh8);
  // Scene
 	Vector camera(0.0,0.0,55.0);
 	double fov = 60 * M_PI / 180;
