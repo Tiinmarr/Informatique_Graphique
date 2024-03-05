@@ -51,4 +51,4 @@ Here is the result with two meshes of cat, I decided to try 2500 rays for 7 boun
 
 ## Final scene : 
 
-If you want to run the final program, you'll have to download the mesh files [here](https://filesender.renater.fr/?s=download&token=6b54ea9e-36ef-414a-91ee-c43dd3ef9d69).
+If you want to run the final program, you'll have to download the mesh files [here](https://filesender.renater.fr/?s=download&token=6b54ea9e-36ef-414a-91ee-c43dd3ef9d69). (Please note that if you got .blend mesh, you can convert them to .obj file by using Blender)
