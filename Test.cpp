@@ -717,7 +717,6 @@ class Scene
 int main() {
 	int W = 512;
 	int H = 512;
-<<<<<<< HEAD
 	int N_rays = 200;
 
 // For debbuging : 
@@ -744,33 +743,6 @@ int main() {
 	// mesh3.translate(Vector(-5,-8,0.));
 	// mesh3.root = new Node(mesh3.printBox(0, mesh3.indices.size()));
 	// mesh3.print_Tree(mesh3.root, 0, mesh3.indices.size());
-=======
-	int N_rays = 500;
-
-	TriangleMesh mesh(Vector(1,0.3,0));
-	mesh.readOBJ("cat.obj");
-	mesh.scale(0.5);
-	mesh.translate(Vector(-25,-10,8));
-	mesh.rotate(-M_PI/4, Vector(0,1,0));
-	mesh.root = new Node(mesh.printBox(0, mesh.indices.size()));
-	mesh.print_Tree(mesh.root, 0, mesh.indices.size());
-
-	TriangleMesh mesh2(Vector(0.,0.,0.));
-	mesh2.readOBJ("cat.obj");
-	mesh2.scale(0.5);
-	mesh2.translate(Vector(-25,-10,-8));
-	mesh2.rotate(-3*M_PI/4, Vector(0,1,0));
-	mesh2.root = new Node(mesh2.printBox(0, mesh2.indices.size()));
-	mesh2.print_Tree(mesh2.root, 0, mesh2.indices.size());
-
-	TriangleMesh mesh3(Vector(0.8,0.3,0.2));
-	mesh3.readOBJ("car.obj");
-	mesh3.scale(1.1);
-	mesh3.rotate(M_PI/2, Vector(0,1,0));
-	mesh3.translate(Vector(-5,-10,0.));
-	mesh3.root = new Node(mesh3.printBox(0, mesh3.indices.size()));
-	mesh3.print_Tree(mesh3.root, 0, mesh3.indices.size());
->>>>>>> a3e6c4a0bef85557e8009a2445541508b1cb98f6
 	
 // Final scene : 
 
@@ -831,17 +803,10 @@ int main() {
 	mesh8.print_Tree(mesh8.root, 0, mesh8.indices.size());
 
 	Scene scene;
-<<<<<<< HEAD
 	Sphere lumiere(Vector(-10,30,35), 10, Vector(1,1,1)); //light
 	Sphere sphere(Vector(12.5,17.0,-10.0), 6.0,Vector(0.3,0.9,0.4), true);//mirror
 	Sphere sphere2_1(Vector(-12.5,17.0,-10.0), 6.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
 	Sphere sphere2_2(Vector(-12.5,17.0,-10.0), 5.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
-=======
-	Sphere lumiere(Vector(-10,20,35), 10, Vector(1,1,1)); //light
-	Sphere sphere(Vector(0.0,20.0,-10.0), 8.0,Vector(0.3,0.9,0.4), true);//mirror
-	Sphere sphere2_1(Vector(-20.0,20.0,-10.0), 8.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
-	Sphere sphere2_2(Vector(-20.0,20.0,-10.0), 7.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
->>>>>>> a3e6c4a0bef85557e8009a2445541508b1cb98f6
 	// Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false,true);//transparent
 	Sphere sphere3(Vector(0.0,0.0,10.0), 8.0,Vector(0.7,0.4,0.2),false);
 	// Sphere sphere_pleine(Vector(10,0,10), 4.0,Vector(0.7,0.4,0.2));
@@ -875,14 +840,11 @@ int main() {
 	scene.objet.push_back(&mesh);
 	scene.objet.push_back(&mesh2);
 	scene.objet.push_back(&mesh3);
-<<<<<<< HEAD
 	scene.objet.push_back(&mesh4);
 	scene.objet.push_back(&mesh5);
 	scene.objet.push_back(&mesh6);
 	scene.objet.push_back(&mesh7);
 	scene.objet.push_back(&mesh8);
-=======
->>>>>>> a3e6c4a0bef85557e8009a2445541508b1cb98f6
  // Scene
 	Vector camera(0.0,0.0,55.0);
 	double fov = 60 * M_PI / 180;
