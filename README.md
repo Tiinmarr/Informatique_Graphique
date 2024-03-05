@@ -48,3 +48,7 @@ I also added the possibility to translate/rotate/scale the mesh, by juste modify
 Here is the result with two meshes of cat, I decided to try 2500 rays for 7 bounces, therefore it take a lot time (more than 2 hours I guess..). Nevertheless, the picture is very nice : 
 
 ![cat](/results_rapport/cat.png)
+
+## Final scene : 
+
+If you want to run the final program, you'll have to download the mesh files [here](https://filesender.renater.fr/?s=download&token=6b54ea9e-36ef-414a-91ee-c43dd3ef9d69).
