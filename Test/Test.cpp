@@ -7,7 +7,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#define M_PI 3.1415
+#define M_PI 3.14159265358979323846
 #include <cmath>
 #include <string>
 #include <iostream>
@@ -126,15 +126,17 @@ class Ray
 
 class Geometry {
 public:
-	Geometry(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, bool transparent = false, bool inverseN = false)
-		: albedo(albedo), mirror(mirror), transparent(transparent), inverseN(inverseN) {}
+	Geometry(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, bool transparent = false, bool inverseN = false, bool procedural = false, int proc_index = 0)
+		: albedo(albedo), mirror(mirror), transparent(transparent), inverseN(inverseN), procedural(procedural), proc_index(proc_index) {}
 
-	virtual bool intersect(const Ray& r, Vector& P, Vector& N, double& t) const = 0;
+	virtual bool intersect(const Ray& r, Vector& P, Vector& N, double& t, Vector& texture_albedo) const = 0;
 
 	Vector albedo;
 	bool mirror;
 	bool transparent;
 	bool inverseN;
+	bool procedural;
+	int proc_index;
 };
 
 
@@ -377,13 +379,14 @@ TriangleMesh(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, 
 
 	}
 
-	bool intersect(const Ray& r, Vector& P, Vector& N, double& t) const {
+	bool intersect(const Ray& r, Vector& P, Vector& N, double& t, Vector& texture_albedo) const {
 		double new_t =1E10;
 		bool has_inter =false;
 		if (!root->bbox.has_intersection(r)) return false;
 		std::list<Node*> nodes;
 		nodes.push_back(root);
-
+		double best_alpha, best_beta;
+		int best_i;
 		while (!nodes.empty())
 		{
 			const Node* actual = nodes.back();
@@ -420,52 +423,44 @@ TriangleMesh(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, 
 						has_inter = true;
 						if (t_local < new_t) {
 							new_t = t_local;
+							best_i = i;
 							t = t_local;
 							P = r.O + t * r.u;
 							// N = localN;
 							// N.normalize();
 							N = alpha * normals[indices[i].ni] + beta * normals[indices[i].nj] + gamma * normals[indices[i].nk];
-							N.normalize();
+							// N.normalize();
+							best_alpha = alpha;
+							best_beta = beta;
 						}
 					}
 				}
 			}
 		}
+		if (has_inter)
+		{
+			N.normalize();
+			if (indices[best_i].group > texture.size() || texture.size() == 0) {
+				texture_albedo = albedo;
+			}
+			else {
+				Vector Uvp = uvs[indices[best_i].uvi] * best_alpha + uvs[indices[best_i].uvj] * best_beta + uvs[indices[best_i].uvk] * (1 - best_alpha - best_beta);
+				Uvp[0] = fabs(Uvp[0]);
+				Uvp[0] = Uvp[0] - floor(Uvp[0]);
+				Uvp[1] = fabs(Uvp[1]);
+				Uvp[1] = Uvp[1] - floor(Uvp[1]);
+				Uvp[1] = 1 - Uvp[1];
+
+				Uvp = Uvp * Vector(texture_width[indices[best_i].group], texture_height[indices[best_i].group], 0);
+				
+				int u = std::min((int)Uvp[0],texture_width[indices[best_i].group] - 1);
+				int v = std::min((int)Uvp[1],texture_height[indices[best_i].group] - 1);
+				int pixel = v * texture_width[indices[best_i].group] + u;
+				texture_albedo = Vector(texture[indices[best_i].group][3 * pixel], texture[indices[best_i].group][3 * pixel + 1], texture[indices[best_i].group][3 * pixel + 2]);
+			}
+
+		}
 		return has_inter;
-		// double new_t =1E10;
-		// // bool has_inter = false;
-		// bool has_inter;
-		// for (int i=0; i<indices.size(); i++)
-		// {
-		// 	const Vector& A = vertices[indices[i].vtxi];
-		// 	const Vector& B = vertices[indices[i].vtxj];
-		// 	const Vector& C = vertices[indices[i].vtxk];
-
-		// 	Vector e1 = B - A;
-		// 	Vector e2 = C - A;
-		// 	Vector localN = cross(e1, e2);
-
-		// 	Vector OA_u = cross(A - r.O, r.u);
-
-		// 	double uN = dot(r.u, localN);
-
-		// 	double beta = dot(e2, OA_u) / uN;
-		// 	double gamma = -dot(e1, OA_u) / uN;
-		// 	double t_local = dot(A - r.O, localN) / uN;  
-		// 	double alpha = 1 - beta - gamma;
-
-		// 	if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <=1 && alpha >= 0 && t_local >0) {
-		// 		has_inter = true;
-		// 		if (t_local < new_t) {
-		// 			new_t = t_local;
-		// 			t = t_local;
-		// 			P = r.O + t * r.u;
-		// 			N = localN;
-		// 			N.normalize();
-		// 		}
-		// 	}
-		// }
-		// return has_inter;
 	}
 
 	BoundingBox printBox(int triangle_init, int triangle_end) {
@@ -523,12 +518,6 @@ TriangleMesh(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, 
 		print_Tree(node->fd, pivot, end);
 	}
 
-	std::vector<TriangleIndices> indices;
-	std::vector<Vector> vertices;
-	std::vector<Vector> normals;
-	std::vector<Vector> uvs;
-	std::vector<Vector> vertexcolors;
-
 	void scale(double s) {
 		for (int i = 0; i < vertices.size(); i++) {
 			vertices[i] = vertices[i] * s;
@@ -553,6 +542,22 @@ TriangleMesh(const Vector& albedo = Vector(1.0, 1.0, 1.0), bool mirror = false, 
 			vertices[i][2] = x * (axis[2] * axis[0] * (1 - c) - axis[1] * s) + y * (axis[2] * axis[1] * (1 - c) + axis[0] * s) + z * (c + sqr(axis[2]) * (1 - c));
 		}
 	}
+
+	void load_T(const char * file)
+	{
+		int x,y,c;
+		texture.push_back(stbi_loadf(file,&x,&y,&c,3));
+		texture_width.push_back(x);
+		texture_height.push_back(y);
+	}
+
+	std::vector<float *> texture;
+	std::vector<int> texture_width, texture_height;
+	std::vector<TriangleIndices> indices;
+	std::vector<Vector> vertices;
+	std::vector<Vector> normals;
+	std::vector<Vector> uvs;
+	std::vector<Vector> vertexcolors;
 	
 };
 
@@ -581,15 +586,15 @@ class Sphere : public Geometry
 // 	inverseN = invN;
 //   }
 
-Sphere(const Vector& c, float r, const Vector& alb, bool mir = false, bool trans = false, bool invN = false) : centre(c), rayon(r), Geometry(alb, mir, trans, invN) {}
+Sphere(const Vector& c, float r, const Vector& alb, bool mir = false, bool trans = false, bool invN = false, bool procedural = false, int proc_index=0) : centre(c), rayon(r), Geometry(alb, mir, trans, invN,procedural, proc_index) {}
 
 
-  bool intersect(const Ray& r, Vector& P, Vector& N, double& t) const {
+  bool intersect(const Ray& r, Vector& P, Vector& N, double& t, Vector& texture_albedo) const {
 	double a = 1;
 	double b = 2*dot(r.u,r.O - centre);
 	double c = (r.O-centre).norm2() - rayon * rayon;
 	double delta = b * b - 4 * a * c;
-
+	// texture_albedo = albedo;
 	if (delta < 0) return false;
 	double t1 = (-b - sqrt(delta)) / (2 * a);
 	double t2 = (-b + sqrt(delta)) / (2 * a);
@@ -599,6 +604,20 @@ Sphere(const Vector& c, float r, const Vector& alb, bool mir = false, bool trans
 	P = r.O+ t  * r.u;
 	N = P - centre;
 	N.normalize();
+	if (procedural)
+	{
+		// damier
+		if (proc_index==0)
+		{
+		if (((int)P[0] + (int)P[1] + (int)P[2]) % 2 == 0) texture_albedo = Vector(1,1,1);
+		else texture_albedo = Vector(0,0,0);
+		}
+		else{
+    	double noise = sin(10 * P[0]) * sin(10 * P[1]) * sin(10 * P[2]);
+    	texture_albedo = Vector(0.5, 0.5, 0.9) * (1 + noise);
+		}
+	}
+	else texture_albedo = albedo;
 
 	return true;
   }
@@ -611,17 +630,18 @@ class Scene
 
   Scene() {}
 
-  bool intersect(const Ray& r, Vector& P, Vector& N, int& index, double& best_t){
+  bool intersect(const Ray& r, Vector& P, Vector& N, int& index, double& best_t, Vector& texture_albedo){
 	bool has_inter = false;
-	Vector P_loc, N_loc;
+	Vector P_loc, N_loc, local_texture_albedo;
 	double t_local;
 	best_t = 1E10;
 	for (int i = 0; i < objet.size();i++) {
-		if (objet[i]->intersect(r, P_loc, N_loc, t_local)) {
+		if (objet[i]->intersect(r, P_loc, N_loc, t_local, local_texture_albedo)) {
 			has_inter = true;
 			if (t_local < best_t) {
 				best_t = t_local;
 				index = i;
+				texture_albedo = local_texture_albedo;
 				P = P_loc;
 				if (objet[i]->inverseN) N = -N_loc;
 				else N = N_loc;
@@ -632,16 +652,16 @@ class Scene
   }
 
   Vector GetColor(Ray r, int bounce, bool last_bounce_diffuse = false){
-	Vector P,N;
+	Vector P,N,albedo;
 	double best_t;
 	int index;
 	Vector lumiere(-10,20,40);
 	double intensity = 1E10;
 	Vector lum = dynamic_cast<Sphere*>(objet[0])->centre;
 	float radius = dynamic_cast<Sphere*>(objet[0])->rayon;
-
+	Vector texture_albedo;
 	if (bounce == 0) return Vector(0,0,0);
-	if (intersect(r,P,N,index, best_t)) 
+	if (intersect(r,P,N,index, best_t,albedo)) 
 	
 	{ 
 		if (index == 0) {
@@ -697,19 +717,20 @@ class Scene
 		// double probability_density = dot(NPrim,-PL) / (M_PI * sqr(objet[0].rayon));
 
 		double L_wi = intensity/(4*M_PI * M_PI *  sqr(radius));
-		col = objet[index]->albedo * L_wi * std::max(0.,dot(N,PLPrim)) * std::max(0.,dot(NPrim, -PLPrim)) * sqr(radius) /(d2 * std::max(0.,dot(NPrim,-PL)));
-
+		// col = objet[index]->albedo * L_wi * std::max(0.,dot(N,PLPrim)) * std::max(0.,dot(NPrim, -PLPrim)) * sqr(radius) /(d2 * std::max(0.,dot(NPrim,-PL)));
+		col = albedo * L_wi * std::max(0.,dot(N,PLPrim)) * std::max(0.,dot(NPrim, -PLPrim)) * sqr(radius) /(d2 * std::max(0.,dot(NPrim,-PL)));
 		Ray New_Ray = Ray(P+0.001*N, PLPrim);
 		Vector new_P;
 		Vector new_N;
 		int new_index;
-		if (intersect(New_Ray,new_P,new_N,new_index, best_t) && sqr(best_t + 0.01) < d2) 
+		if (intersect(New_Ray,new_P,new_N,new_index, best_t,texture_albedo) && sqr(best_t + 0.01) < d2) 
 		{
 			col = Vector(0,0,0);
 		}
 		Vector dir_indirect = random_cos(N);
 		Ray r_indirect(P + 0.01 * N, dir_indirect);
-		col += objet[index]->albedo * GetColor(r_indirect, bounce - 1,true);
+		// col += objet[index]->albedo * GetColor(r_indirect, bounce - 1,true);
+		col += albedo * GetColor(r_indirect, bounce - 1,true);
 		return col;
 		}
 	}
@@ -721,11 +742,12 @@ class Scene
 int main() {
 	int W = 512;
 	int H = 512;
-	int N_rays = 500;
+	int N_rays = 1000;
 
 // For debbuging : 
 	// TriangleMesh mesh(Vector(1,0.3,0));
 	// mesh.readOBJ("cat.obj");
+	// mesh.load_T("cat_diff.png");
 	// mesh.scale(0.5);
 	// mesh.translate(Vector(-25,-10,8));
 	// mesh.rotate(-M_PI/4, Vector(0,1,0));
@@ -752,6 +774,7 @@ int main() {
 
 	TriangleMesh mesh(Vector(0.6, 0.3, 0.1));
 	mesh.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
+	mesh.load_T("./classical-museum-pedestals-asset-pack/textures/MuseumPlinthe01_t.jpeg");
 	mesh.scale(0.5);
 	mesh.translate(Vector(0,-10,5));
 	mesh.root = new Node(mesh.printBox(0, mesh.indices.size()));
@@ -759,6 +782,7 @@ int main() {
 
 	TriangleMesh mesh2(Vector(0.6, 0.3, 0.1));
 	mesh2.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
+	mesh2.load_T("./classical-museum-pedestals-asset-pack/textures/MuseumPlinthe01_t.jpeg");
 	mesh2.scale(0.5);
 	mesh2.translate(Vector(-20,-10,5));
 	mesh2.root = new Node(mesh2.printBox(0, mesh2.indices.size()));
@@ -766,6 +790,7 @@ int main() {
 
 	TriangleMesh mesh3(Vector(0.6, 0.3, 0.1));
 	mesh3.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
+	mesh3.load_T("./classical-museum-pedestals-asset-pack/textures/MuseumPlinthe01_t.jpeg");
 	mesh3.scale(0.5);
 	mesh3.translate(Vector(20,-10,5));
 	mesh3.root = new Node(mesh3.printBox(0, mesh3.indices.size()));
@@ -800,15 +825,17 @@ int main() {
 	mesh7.print_Tree(mesh7.root, 0, mesh7.indices.size());
 
 	TriangleMesh mesh8(Vector(0.9, 0.9, 0.9));
-	mesh8.readOBJ("david.obj");
-	mesh8.scale(0.08);
-	mesh8.translate(Vector(-0,0.8,0));
+	mesh8.readOBJ("./nefertitis-bust-like-in-the-museum/source/nefertiti.obj");
+	mesh8.load_T("./nefertitis-bust-like-in-the-museum/textures/texture.png");
+	mesh8.scale(25);
+	mesh8.translate(Vector(-0,1.8,0));
 	mesh8.root = new Node(mesh8.printBox(0, mesh8.indices.size()));
 	mesh8.print_Tree(mesh8.root, 0, mesh8.indices.size());
 
 	Scene scene;
 	Sphere lumiere(Vector(-10,30,35), 10, Vector(1,1,1)); //light
-	Sphere sphere(Vector(12.5,17.0,-10.0), 6.0,Vector(0.3,0.9,0.4), true);//mirror
+	Sphere mirror(Vector(0,25.0,-10.0), 6.0,Vector(0.3,0.9,0.4), true);//mirror
+	Sphere sphere(Vector(12.5,17.0,-10.0), 6.0,Vector(0.3,0.9,0.4),false,false,false,true,1);//procedural
 	Sphere sphere2_1(Vector(-12.5,17.0,-10.0), 6.0,Vector(0.3,0.4,0.9),false,true);//sphere_creuse
 	Sphere sphere2_2(Vector(-12.5,17.0,-10.0), 5.8,Vector(0.3,0.4,0.9),false,true,true);//inversion
 	// Sphere sphere3(Vector(-20.0,0.0,0.0), 8.0,Vector(0.7,0.4,0.2),false,true);//transparent
@@ -817,7 +844,7 @@ int main() {
 	Sphere green(Vector(0.0, 0.0, -1000.), 940., Vector(0.1, 0.8, 1));
 	Sphere red(Vector(0.0, 1000.0, 0.), 940., Vector(1, 0.2, 0.2));
 	Sphere rose(Vector(0.0, 0.0, 1000.), 940, Vector(0.8, 0.2, 0.6));
-	Sphere blue(Vector(0.0, -1000.0, 0.), 990, Vector(0.2, 0.2, 1));
+	Sphere blue(Vector(0.0, -1000.0, 0.), 990, Vector(0.2, 0.2, 1),false,false,false,true,0);
 	Sphere yellow(Vector(-1000.0, 0.0, 0.), 940, Vector(1, 1, 0));
 	Sphere magenta(Vector(1000.0, 0.0, 0.), 940, Vector(1, 0, 1));
 
@@ -836,6 +863,7 @@ int main() {
 	scene.objet.push_back(&blue);
 	scene.objet.push_back(&yellow);
 	scene.objet.push_back(&magenta);
+	scene.objet.push_back(&mirror);
 	scene.objet.push_back(&sphere);
 	scene.objet.push_back(&sphere2_1);
 	scene.objet.push_back(&sphere2_2);
@@ -851,6 +879,11 @@ int main() {
 	scene.objet.push_back(&mesh8);
  // Scene
 	Vector camera(0.0,0.0,55.0);
+	Vector Direction(0,0,-1), Up(0,1,0);
+	Vector Right = cross(Direction,Up);
+	double rotation = 30 * M_PI / 180;
+	Direction = Vector(sin(rotation),0,-cos(rotation));
+	// camera = camera - Right * 20;
 	double fov = 60 * M_PI / 180;
 	double d = W / (2 * tan(fov/2));
 	double mise_au_point = 55;
@@ -890,8 +923,9 @@ int main() {
 				else {
 				double r1 = uniform(engine)-0.5;
 				double r2 = uniform(engine)-0.5;
-				Vector v(j - W/2. + 0.5 +r1, -i + H/2. - 0.5 +r2, - d);
+				Vector v(j - W/2. + 0.5 +r1, -i + H/2. - 0.5 +r2, -d);
 				v.normalize();
+				// v = v[0]*Right + v[1]*Up + v[2]*Direction;
 				Ray r(camera,v);
 				col += scene.GetColor(r, bounce)/N_rays;
 				}
