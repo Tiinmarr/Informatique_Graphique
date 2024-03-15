@@ -744,17 +744,17 @@ class Scene
 int main() {
 	int W = 512;
 	int H = 512;
-	int N_rays = 30;
+	int N_rays = 3000;
 
 // For debbuging : 
-	TriangleMesh mesh(Vector(1,0.3,0));
-	mesh.readOBJ("cat.obj");
-	mesh.load_T("cat_diff.png");
-	mesh.scale(0.5);
-	mesh.translate(Vector(-25,-10,8));
-	mesh.rotate(-M_PI/4, Vector(0,1,0));
-	mesh.root = new Node(mesh.printBox(0, mesh.indices.size()));
-	mesh.print_Tree(mesh.root, 0, mesh.indices.size());
+	// TriangleMesh mesh(Vector(1,0.3,0));
+	// mesh.readOBJ("cat.obj");
+	// mesh.load_T("cat_diff.png");
+	// mesh.scale(0.5);
+	// mesh.translate(Vector(-25,-10,8));
+	// mesh.rotate(-M_PI/4, Vector(0,1,0));
+	// mesh.root = new Node(mesh.printBox(0, mesh.indices.size()));
+	// mesh.print_Tree(mesh.root, 0, mesh.indices.size());
 
 	// TriangleMesh mesh2(Vector(0.,0.,0.));
 	// mesh2.readOBJ("cat.obj");
@@ -774,65 +774,65 @@ int main() {
 	
 // Final scene : 
 
-	// TriangleMesh mesh(Vector(0.6, 0.3, 0.1));
-	// mesh.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
-	// mesh.load_T("./classical-museum-pedestals-asset-pack/textures/MuseumPlinthe01_t.jpeg");
-	// mesh.scale(0.5);
-	// mesh.translate(Vector(0,-10,5));
-	// mesh.root = new Node(mesh.printBox(0, mesh.indices.size()));
-	// mesh.print_Tree(mesh.root, 0, mesh.indices.size());
+	TriangleMesh mesh(Vector(0.6, 0.3, 0.1));
+	mesh.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
+	mesh.load_T("./classical-museum-pedestals-asset-pack/textures/MuseumPlinthe01_t.jpeg");
+	mesh.scale(0.5);
+	mesh.translate(Vector(0,-10,5));
+	mesh.root = new Node(mesh.printBox(0, mesh.indices.size()));
+	mesh.print_Tree(mesh.root, 0, mesh.indices.size());
 
-	// TriangleMesh mesh2(Vector(0.6, 0.3, 0.1));
-	// mesh2.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
-	// mesh2.load_T("./classical-museum-pedestals-asset-pack/textures/MuseumPlinthe01_t.jpeg");
-	// mesh2.scale(0.5);
-	// mesh2.translate(Vector(-20,-10,5));
-	// mesh2.root = new Node(mesh2.printBox(0, mesh2.indices.size()));
-	// mesh2.print_Tree(mesh2.root, 0, mesh2.indices.size());
+	TriangleMesh mesh2(Vector(0.6, 0.3, 0.1));
+	mesh2.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
+	mesh2.load_T("./classical-museum-pedestals-asset-pack/textures/MuseumPlinthe01_t.jpeg");
+	mesh2.scale(0.5);
+	mesh2.translate(Vector(-20,-10,5));
+	mesh2.root = new Node(mesh2.printBox(0, mesh2.indices.size()));
+	mesh2.print_Tree(mesh2.root, 0, mesh2.indices.size());
 
-	// TriangleMesh mesh3(Vector(0.6, 0.3, 0.1));
-	// mesh3.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
-	// mesh3.load_T("./classical-museum-pedestals-asset-pack/textures/MuseumPlinthe01_t.jpeg");
-	// mesh3.scale(0.5);
-	// mesh3.translate(Vector(20,-10,5));
-	// mesh3.root = new Node(mesh3.printBox(0, mesh3.indices.size()));
-	// mesh3.print_Tree(mesh3.root, 0, mesh3.indices.size());
+	TriangleMesh mesh3(Vector(0.6, 0.3, 0.1));
+	mesh3.readOBJ("./classical-museum-pedestals-asset-pack/source/MuseumPedestals.obj");
+	mesh3.load_T("./classical-museum-pedestals-asset-pack/textures/MuseumPlinthe01_t.jpeg");
+	mesh3.scale(0.5);
+	mesh3.translate(Vector(20,-10,5));
+	mesh3.root = new Node(mesh3.printBox(0, mesh3.indices.size()));
+	mesh3.print_Tree(mesh3.root, 0, mesh3.indices.size());
 
-	// TriangleMesh mesh4(Vector(0.9, 0.9, 0.9));
-	// mesh4.readOBJ("./support_rodin/Doric Pedestal.obj");
-	// mesh4.scale(30);
-	// mesh4.translate(Vector(12.5,-10,-10));
-	// mesh4.root = new Node(mesh4.printBox(0, mesh4.indices.size()));
-	// mesh4.print_Tree(mesh4.root, 0, mesh4.indices.size());
+	TriangleMesh mesh4(Vector(0.9, 0.9, 0.9));
+	mesh4.readOBJ("./support_rodin/Doric Pedestal.obj");
+	mesh4.scale(30);
+	mesh4.translate(Vector(12.5,-10,-10));
+	mesh4.root = new Node(mesh4.printBox(0, mesh4.indices.size()));
+	mesh4.print_Tree(mesh4.root, 0, mesh4.indices.size());
 
-	// TriangleMesh mesh5(Vector(0.9, 0.9, 0.9));
-	// mesh5.readOBJ("./support_rodin/Doric Pedestal.obj");
-	// mesh5.scale(30);
-	// mesh5.translate(Vector(-12.5,-10,-10));
-	// mesh5.root = new Node(mesh5.printBox(0, mesh5.indices.size()));
-	// mesh5.print_Tree(mesh5.root, 0, mesh5.indices.size());
+	TriangleMesh mesh5(Vector(0.9, 0.9, 0.9));
+	mesh5.readOBJ("./support_rodin/Doric Pedestal.obj");
+	mesh5.scale(30);
+	mesh5.translate(Vector(-12.5,-10,-10));
+	mesh5.root = new Node(mesh5.printBox(0, mesh5.indices.size()));
+	mesh5.print_Tree(mesh5.root, 0, mesh5.indices.size());
 
-	// TriangleMesh mesh6(Vector(0.9, 0.9, 0.9));
-	// mesh6.readOBJ("Rodin_Thinker.obj");
-	// mesh6.scale(7);
-	// mesh6.translate(Vector(20,-0.7,5));
-	// mesh6.root = new Node(mesh6.printBox(0, mesh6.indices.size()));
-	// mesh6.print_Tree(mesh6.root, 0, mesh6.indices.size());
+	TriangleMesh mesh6(Vector(0.9, 0.9, 0.9));
+	mesh6.readOBJ("Rodin_Thinker.obj");
+	mesh6.scale(7);
+	mesh6.translate(Vector(20,-0.7,5));
+	mesh6.root = new Node(mesh6.printBox(0, mesh6.indices.size()));
+	mesh6.print_Tree(mesh6.root, 0, mesh6.indices.size());
 
-	// TriangleMesh mesh7(Vector(0.216, 0.427, 0.392));
-	// mesh7.readOBJ("model.obj");
-	// mesh7.scale(4);
-	// mesh7.translate(Vector(-23,-1,2));
-	// mesh7.root = new Node(mesh7.printBox(0, mesh7.indices.size()));
-	// mesh7.print_Tree(mesh7.root, 0, mesh7.indices.size());
+	TriangleMesh mesh7(Vector(0.216, 0.427, 0.392));
+	mesh7.readOBJ("model.obj");
+	mesh7.scale(4);
+	mesh7.translate(Vector(-23,-1,2));
+	mesh7.root = new Node(mesh7.printBox(0, mesh7.indices.size()));
+	mesh7.print_Tree(mesh7.root, 0, mesh7.indices.size());
 
-	// TriangleMesh mesh8(Vector(0.9, 0.9, 0.9));
-	// mesh8.readOBJ("./nefertitis-bust-like-in-the-museum/source/nefertiti.obj");
-	// mesh8.load_T("./nefertitis-bust-like-in-the-museum/textures/texture.png");
-	// mesh8.scale(25);
-	// mesh8.translate(Vector(-0,1.8,0));
-	// mesh8.root = new Node(mesh8.printBox(0, mesh8.indices.size()));
-	// mesh8.print_Tree(mesh8.root, 0, mesh8.indices.size());
+	TriangleMesh mesh8(Vector(0.9, 0.9, 0.9));
+	mesh8.readOBJ("./nefertitis-bust-like-in-the-museum/source/nefertiti.obj");
+	mesh8.load_T("./nefertitis-bust-like-in-the-museum/textures/texture.png");
+	mesh8.scale(25);
+	mesh8.translate(Vector(-0,1.8,0));
+	mesh8.root = new Node(mesh8.printBox(0, mesh8.indices.size()));
+	mesh8.print_Tree(mesh8.root, 0, mesh8.indices.size());
 
 	Scene scene;
 	Sphere lumiere(Vector(-10,30,35), 10, Vector(1,1,1)); //light
@@ -857,6 +857,7 @@ int main() {
 	// Sphere blue(Vector(0.0,-1000.0,0.), 990,Vector(0.,0.,1.));
 	// Sphere yellow(Vector(-1000.0,0.0,0.), 940,Vector(1.,1.,0.));
 	// Sphere magenta(Vector(1000.0,0.0,0.), 940,Vector(0.8,0.,1.));
+
 	scene.objet.push_back(&lumiere);
 	scene.objet.push_back(&green);
 	scene.objet.push_back(&red);
@@ -864,20 +865,20 @@ int main() {
 	scene.objet.push_back(&blue);
 	scene.objet.push_back(&yellow);
 	scene.objet.push_back(&magenta);
-	// scene.objet.push_back(&mirror);
+	scene.objet.push_back(&mirror);
 	scene.objet.push_back(&sphere);
-	// scene.objet.push_back(&sphere2_1);
-	// scene.objet.push_back(&sphere2_2);
+	scene.objet.push_back(&sphere2_1);
+	scene.objet.push_back(&sphere2_2);
 	// scene.objet.push_back(&sphere3);
 	// scene.objet.push_back(&sphere_pleine);
 	scene.objet.push_back(&mesh);
-	// scene.objet.push_back(&mesh2);
-	// scene.objet.push_back(&mesh3);
-	// scene.objet.push_back(&mesh4);
-	// scene.objet.push_back(&mesh5);
-	// scene.objet.push_back(&mesh6);
-	// scene.objet.push_back(&mesh7);
-	// scene.objet.push_back(&mesh8);
+	scene.objet.push_back(&mesh2);
+	scene.objet.push_back(&mesh3);
+	scene.objet.push_back(&mesh4);
+	scene.objet.push_back(&mesh5);
+	scene.objet.push_back(&mesh6);
+	scene.objet.push_back(&mesh7);
+	scene.objet.push_back(&mesh8);
 	// Scene
 	Vector camera(0.0,0.0,55.0);
 	Vector new_camera;
@@ -898,15 +899,17 @@ int main() {
 	bool blur = false;
 
 	int bounce = 7;
-	for(int image_number=1;image_number<40;image_number++)
-	{
-		angle = 0 + image_number * rotation/20;
-		Right = Vector(1,0,0);
-		Direction = Vector(sin(angle),0,cos(angle));
-		// new_camera = camera + Vector(-30*cos(angle),0,30*sin(angle));
-		new_camera = camera + Vector(1.5*image_number,0,-2.8*image_number);
-		Right = Vector(cos(angle),0,-sin(angle));
-		
+	// if movie : 
+	// for(int image_number=1;image_number<40;image_number++)
+	// {
+	// 	angle = 0 + image_number * rotation/20;
+	// 	Right = Vector(1,0,0);
+	// 	Direction = Vector(sin(angle),0,cos(angle));
+	// 	// new_camera = camera + Vector(-30*cos(angle),0,30*sin(angle));
+	// 	new_camera = camera + Vector(1.5*image_number,0,-2.8*image_number);
+	// 	Right = Vector(cos(angle),0,-sin(angle));
+	// if high render :
+
 	#pragma omp parallel for 
 		for (int i = 0; i < H; i++) {
 			for (int j = 0; j < W; j++) {
@@ -937,8 +940,11 @@ int main() {
 						double r2 = uniform(engine)-0.5;
 						Vector v(j - W/2. + 0.5 +r1, -i + H/2. - 0.5 +r2, -d);
 						v.normalize();
-						Vector new_v = Vector(matrix_mult(v,Right),matrix_mult(v,Up),matrix_mult(v,Direction)); // Apply rotation
-						Ray r(new_camera,new_v);
+						// if movie :
+						// Vector new_v = Vector(matrix_mult(v,Right),matrix_mult(v,Up),matrix_mult(v,Direction)); // Apply rotation
+						// Ray r(new_camera,new_v);
+						// else : 
+						Ray r(camera,v);
 						col += scene.GetColor(r, bounce)/N_rays;
 					}
 				}
@@ -947,7 +953,10 @@ int main() {
 				image[(i * W + j) * 3 + 2] =  std::min(255.,std::pow(col[2],0.45));  // BLUE
 			}
 		}
-		stbi_write_png(("movie"+std::to_string(39+image_number)+".png").c_str(), W, H, 3, &image[0], 0);
-	}
+		// for movie
+		// stbi_write_png(("movie"+std::to_string(39+image_number)+".png").c_str(), W, H, 3, &image[0], 0);
+		// for high quality render
+		stbi_write_png("scene.png", W, H, 3, &image[0], 0);
+	// }
 	return 0;
 	}
