@@ -822,7 +822,7 @@ int main() {
 	TriangleMesh mesh7(Vector(0.216, 0.427, 0.392));
 	mesh7.readOBJ("model.obj");
 	mesh7.scale(4);
-	mesh7.translate(Vector(-23,-1,2));
+	mesh7.translate(Vector(-21,-0.5,9));
 	mesh7.root = new Node(mesh7.printBox(0, mesh7.indices.size()));
 	mesh7.print_Tree(mesh7.root, 0, mesh7.indices.size());
 
@@ -830,7 +830,7 @@ int main() {
 	mesh8.readOBJ("./nefertitis-bust-like-in-the-museum/source/nefertiti.obj");
 	mesh8.load_T("./nefertitis-bust-like-in-the-museum/textures/texture.png");
 	mesh8.scale(25);
-	mesh8.translate(Vector(-0,1.8,0));
+	mesh8.translate(Vector(-0,2.6,5));
 	mesh8.root = new Node(mesh8.printBox(0, mesh8.indices.size()));
 	mesh8.print_Tree(mesh8.root, 0, mesh8.indices.size());
 
@@ -885,7 +885,7 @@ int main() {
 	Vector Direction(0,0,-1), Up(0,1,0);
 	// Vector Right = cross(Direction,Up);
 	Vector Right;
-	double rotation = -90 * M_PI / 180;
+	double rotation = 60 * M_PI / 180;
 	double angle;
 	// camera = camera - Right * 20;
 	double fov = 60 * M_PI / 180;
@@ -897,17 +897,29 @@ int main() {
 	Vector color;
 	std::vector<unsigned char> image(W * H * 3, 0);
 	bool blur = false;
-
+	bool right_part_movie = true;
 	int bounce = 7;
 	// if movie : 
-	// for(int image_number=1;image_number<40;image_number++)
+	// for(int movie_part=0;movie_part<2;movie_part++)
 	// {
+	// for(int image_number=0;image_number<40;image_number++)
+	// {
+	// 	if (right_part_movie)
+	// 	{
 	// 	angle = 0 + image_number * rotation/20;
 	// 	Right = Vector(1,0,0);
 	// 	Direction = Vector(sin(angle),0,cos(angle));
 	// 	// new_camera = camera + Vector(-30*cos(angle),0,30*sin(angle));
+	// 	new_camera = camera + Vector(-1.5*image_number,0,-1.8*image_number);
+	// 	Right = Vector(cos(angle),0,-sin(angle));
+	// 	}
+	// 	else {
+	// 	angle = 0 + image_number * -rotation/20;
+	// 	Right = Vector(1,0,0);
+	// 	Direction = Vector(sin(angle),0,cos(angle));
 	// 	new_camera = camera + Vector(1.5*image_number,0,-2.8*image_number);
 	// 	Right = Vector(cos(angle),0,-sin(angle));
+	// 	}
 	// if high render :
 
 	#pragma omp parallel for 
@@ -950,13 +962,22 @@ int main() {
 				}
 				image[(i * W + j) * 3 + 0] = std::min(255.,std::pow(col[0],0.45));   // RED
 				image[(i * W + j) * 3 + 1] = std::min(255.,std::pow(col[1],0.45)) ;  // GREEN
-				image[(i * W + j) * 3 + 2] =  std::min(255.,std::pow(col[2],0.45));  // BLUE
+				image[(i * W + j) * 3 + 2] = std::min(255.,std::pow(col[2],0.45));  // BLUE
 			}
 		}
 		// for movie
-		// stbi_write_png(("movie"+std::to_string(39+image_number)+".png").c_str(), W, H, 3, &image[0], 0);
+		// if (right_part_movie)
+		// {
+		// stbi_write_png(("movie"+std::to_string(39-image_number)+".png").c_str(), W, H, 3, &image[0], 0);
+		// }
+		// else
+		// {
+		// stbi_write_png(("movie"+std::to_string(40+image_number)+".png").c_str(), W, H, 3, &image[0], 0);
+		// }
 		// for high quality render
 		stbi_write_png("scene.png", W, H, 3, &image[0], 0);
+	// }
+	// right_part_movie = false;
 	// }
 	return 0;
 	}
